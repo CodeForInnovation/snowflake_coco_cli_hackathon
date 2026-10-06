@@ -1,0 +1,9 @@
+.streamlit/secrets.toml
+.venv/
+__pycache__/
+*.pyc
+sv_proto.json
+rsa_key.p8
+rsa_key.pub
+*.p8
+*.pem

@@ -1,0 +1,10 @@
+definition_version: 2
+entities:
+  streamlit_app:
+    type: streamlit
+    identifier:
+      schema: ANALYTICS
+    properties:
+      main_file: src/streamlit_app.py
+      query_warehouse: COMPUTE_WH
+      title: "SupplyChain Semantic Guardian"
