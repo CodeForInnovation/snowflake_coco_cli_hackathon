@@ -569,7 +569,7 @@ elif page == "Governance Dashboard":
             }
             return colors.get(val, "")
         st.dataframe(
-            full_registry.style.applymap(color_status, subset=["STATUS"]),
+            full_registry.style.map(color_status, subset=["STATUS"]),
             use_container_width=True, hide_index=True,
         )
 
