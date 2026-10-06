@@ -241,6 +241,12 @@ if page == "Solution Architecture":
         unsafe_allow_html=True,
     )
 
+    st.info(
+        "**How to use this page:** This page explains the end-to-end architecture of the SupplyChain Semantic Guardian. "
+        "Scroll down to see the 5-step governance lifecycle, the CoCo skills, and the Cortex Agent that powers governed conversational analytics.",
+        icon="ℹ️",
+    )
+
     # --- The Problem ---
     st.markdown("#### The Problem")
     st.markdown(
@@ -382,6 +388,12 @@ elif page == "Ontology":
         'Supplier to Part to Shipment to Order to Customer.</p>',
         unsafe_allow_html=True,
     )
+    st.info(
+        "**How to use this page:** Review the canonical entity model that unifies data from multiple ERP and logistics systems. "
+        "Each entity shown here has a governed definition in the Semantic Registry. The relationships show how data flows from "
+        "raw staging tables through analytics to reporting.",
+        icon="ℹ️",
+    )
 
     # --- Architecture diagram ---
     st.markdown("#### Data Flow Architecture")
@@ -507,6 +519,11 @@ elif page == "Governance Dashboard":
         '<p class="subtitle">Proactive scan of all data objects and their governance status. '
         'Approve, reject, or investigate pending definitions.</p>',
         unsafe_allow_html=True,
+    )
+    st.info(
+        "**How to use this page:** The KPI cards show overall governance coverage. Below, you can browse every concept in the registry, "
+        "filter by status, and use the Approve/Reject workflow on PENDING_REVIEW items. The Governance Scanner skill detects these gaps automatically.",
+        icon="ℹ️",
     )
 
     registry = run_query(
@@ -656,6 +673,11 @@ elif page == "Semantic Explorer":
         'how it is calculated, and whether it is governed.</p>',
         unsafe_allow_html=True,
     )
+    st.info(
+        "**How to use this page:** Select a concept from the dropdown to see its canonical definition, physical source mapping, "
+        "and a plain-English explanation of how it is calculated. This is what the Metadata Context skill provides to CoCo.",
+        icon="ℹ️",
+    )
 
     # Plain English explanations for transformations
     TRANSFORM_EXPLANATIONS = {
@@ -740,6 +762,12 @@ elif page == "Ask Supply Chain":
         '<p class="subtitle">Ask business questions in natural language. Every question goes through a '
         '<strong>real governance gate</strong> — the system queries SEMANTIC_REGISTRY before answering.</p>',
         unsafe_allow_html=True,
+    )
+    st.info(
+        "**How to use this page:** Type a business question below. The system first checks the Semantic Registry "
+        "to verify the concepts are governed before answering. Try: 'Which suppliers have poor delivery performance?' "
+        "(governed) or 'What is the VENDOR_NO trend?' (ungoverned — will be blocked).",
+        icon="ℹ️",
     )
 
     question = st.text_input("Ask a question", placeholder="e.g., Which suppliers have poor delivery performance?")
