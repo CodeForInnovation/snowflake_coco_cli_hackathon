@@ -652,42 +652,84 @@ elif page == "Governance Dashboard":
 elif page == "Semantic Explorer":
     st.markdown('<h1 class="section-header">Semantic Explorer</h1>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitle">Look up any business concept to see its canonical definition, governance status, and physical source mapping.</p>',
+        '<p class="subtitle">Look up any business concept to understand what it means, where it comes from, '
+        'how it is calculated, and whether it is governed.</p>',
         unsafe_allow_html=True,
     )
 
-    search_term = st.text_input("Search business concepts", placeholder="e.g., delivery performance, supplier name, fill rate")
+    # Plain English explanations for transformations
+    TRANSFORM_EXPLANATIONS = {
+        "Direct mapping from SUP_ID": "This value comes directly from the raw supplier identifier in the staging table. No calculation is applied — it is simply renamed from the abbreviated SUP_ID to the clearer SUPPLIER_ID.",
+        "Direct mapping from SUP_NM": "The supplier's official name, taken directly from the staging data. Renamed from SUP_NM to SUPPLIER_NAME for clarity.",
+        "Direct mapping from CNTRY": "The country where the supplier is headquartered. Renamed from the abbreviation CNTRY to COUNTRY.",
+        "Direct mapping from ORD_NO": "The unique order number, taken directly from source. Renamed from ORD_NO to ORDER_NUMBER.",
+        "Direct mapping from CUST_NM": "The dealer or retailer name who placed the order. Renamed from CUST_NM to CUSTOMER_NAME.",
+        "Calculated: COUNT(on-time) / COUNT(total) * 100": (
+            "**How it works in plain English:** We look at every shipment for a supplier. "
+            "For each shipment, we check: was the actual delivery date on or before the promised date? "
+            "We count how many were on time, divide by the total number of shipments, and multiply by 100 to get a percentage. "
+            "A score of 85% means 85 out of every 100 shipments arrived on time."
+        ),
+        "Calculated: SUM(qty_shipped) / SUM(qty_ordered) * 100": (
+            "**How it works in plain English:** For each supplier, we add up the total quantity they actually shipped "
+            "and divide it by the total quantity we ordered from them. Multiply by 100 for a percentage. "
+            "A fill rate of 92% means the supplier shipped 92% of what was ordered — 8% was short-shipped or backordered."
+        ),
+        "Direct mapping from PROM_DT": "The date the supplier committed to deliver by. Renamed from the abbreviation PROM_DT to PROMISED_DATE.",
+        "Direct mapping from ACTUAL_DT": "The date when the shipment was actually received. Renamed from ACTUAL_DT to DELIVERY_DATE.",
+        "Derived from FREIGHT_AMT": "The shipping cost for each order. Renamed from FREIGHT_AMT to FREIGHT_COST. This is a direct cost figure from the logistics system.",
+    }
+
+    search_term = st.text_input("Search business concepts", placeholder="e.g., delivery, supplier, fill rate, freight")
 
     if search_term:
         results = run_query(f"""
             SELECT r.CONCEPT_ID, r.CANONICAL_NAME, r.DEFINITION, r.ENTITY_TYPE, r.STATUS, r.CONFIDENCE,
-                   m.SOURCE_TABLE, m.SOURCE_COLUMN, m.TRANSFORMATION
+                   r.EVIDENCE, m.SOURCE_TABLE, m.SOURCE_COLUMN, m.TRANSFORMATION
             FROM SUPPLY_CHAIN_GOV.GOVERNANCE.SEMANTIC_REGISTRY r
             LEFT JOIN SUPPLY_CHAIN_GOV.GOVERNANCE.SEMANTIC_MAPPINGS m ON r.CONCEPT_ID = m.CONCEPT_ID
             WHERE r.CANONICAL_NAME ILIKE '%{search_term}%' OR r.DEFINITION ILIKE '%{search_term}%'
             ORDER BY r.STATUS, r.CANONICAL_NAME
         """)
         if len(results) == 0:
-            st.info("No concepts found matching your search.")
+            st.info("No concepts found matching your search. Try: delivery, supplier, fill rate, freight, country.")
         else:
             for _, row in results.iterrows():
                 st.markdown(f"### {row['CANONICAL_NAME']} {status_badge(row['STATUS'])}", unsafe_allow_html=True)
                 c1, c2 = st.columns([3, 1])
                 with c1:
-                    st.markdown(f"**Definition:** {row['DEFINITION']}")
+                    st.markdown(f"**What it means:** {row['DEFINITION']}")
                     if pd.notna(row.get("SOURCE_TABLE")) and row.get("SOURCE_TABLE"):
-                        st.markdown(f"**Source:** `{row['SOURCE_TABLE']}.{row['SOURCE_COLUMN']}` | **Transform:** {row['TRANSFORMATION']}")
+                        st.markdown(f"**Where it comes from:** Table `{row['SOURCE_TABLE']}`, column `{row['SOURCE_COLUMN']}`")
+                        transform = row.get("TRANSFORMATION", "")
+                        explanation = TRANSFORM_EXPLANATIONS.get(transform, "")
+                        if explanation:
+                            st.markdown(f"**How it is derived:** {explanation}")
+                        elif transform:
+                            st.markdown(f"**Transformation rule:** {transform}")
+                    if pd.notna(row.get("EVIDENCE")) and row.get("EVIDENCE"):
+                        st.markdown(f"**Why we trust it:** {row['EVIDENCE']}")
                 with c2:
                     st.markdown(f"**Type:** {row['ENTITY_TYPE']}")
                     st.markdown(f"**Confidence:** {row['CONFIDENCE']}")
+                    if row['STATUS'] == 'GOVERNED':
+                        st.markdown("**Safe to use in reports and dashboards.**")
+                    elif row['STATUS'] == 'PENDING_REVIEW':
+                        st.markdown("**Awaiting approval.** Do not use for official reporting yet.")
+                    else:
+                        st.markdown("**Not governed.** Must be proposed and approved before use.")
                 st.divider()
     else:
-        st.markdown("#### All Governed Concepts")
-        all_governed = run_query("""
-            SELECT CANONICAL_NAME, DEFINITION, ENTITY_TYPE, STATUS
-            FROM SUPPLY_CHAIN_GOV.GOVERNANCE.SEMANTIC_REGISTRY ORDER BY STATUS, CANONICAL_NAME
+        st.markdown("#### All Concepts in the Governance Registry")
+        st.markdown("Search above to see detailed explanations, or browse all concepts below.")
+        all_concepts = run_query("""
+            SELECT r.CANONICAL_NAME, r.DEFINITION, r.ENTITY_TYPE, r.STATUS,
+                   m.SOURCE_TABLE, m.SOURCE_COLUMN
+            FROM SUPPLY_CHAIN_GOV.GOVERNANCE.SEMANTIC_REGISTRY r
+            LEFT JOIN SUPPLY_CHAIN_GOV.GOVERNANCE.SEMANTIC_MAPPINGS m ON r.CONCEPT_ID = m.CONCEPT_ID
+            ORDER BY r.STATUS, r.CANONICAL_NAME
         """)
-        st.dataframe(all_governed, use_container_width=True, hide_index=True)
+        st.dataframe(all_concepts, use_container_width=True, hide_index=True)
 
 # ============================
 # PAGE 4: ASK SUPPLY CHAIN (with real governance gate)
